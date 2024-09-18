@@ -22,7 +22,20 @@ $STD apt-get install -y mc
 msg_ok "Installed Dependencies"
 
 msg_info "Setting Up Hardware Acceleration"
-$STD apt-get -y install {va-driver-all,ocl-icd-libopencl1,intel-opencl-icd,vainfo,intel-gpu-tools}
+# Backup the original /etc/apt/sources.list
+cp /etc/apt/sources.list /etc/apt/sources.list.bak
+
+# Update /etc/apt/sources.list with new contents
+cat <<EOF > /etc/apt/sources.list
+deb http://deb.debian.org/debian bookworm main contrib non-free non-free-firmware
+deb http://deb.debian.org/debian bookworm-updates main contrib non-free
+deb http://security.debian.org bookworm-security main contrib non-free
+EOF
+
+# Update package lists
+apt-get update
+
+$STD apt-get -y install {intel-media-va-driver-non-free,va-driver-all,ocl-icd-libopencl1,intel-opencl-icd,vainfo,intel-gpu-tools}
 if [[ "$CTTYPE" == "0" ]]; then
   chgrp video /dev/dri
   chmod 755 /dev/dri
@@ -49,11 +62,6 @@ msg_info "Installing ErsatzTV"
 RELEASE=$(curl -s https://api.github.com/repos/ErsatzTV/ErsatzTV/releases | grep -oP '"tag_name": "\K[^"]+' | head -n 1)
 wget -qO- "https://github.com/ErsatzTV/ErsatzTV/releases/download/${RELEASE}/ErsatzTV-${RELEASE}-linux-x64.tar.gz" | tar -xz -C /opt
 mv "/opt/ErsatzTV-${RELEASE}-linux-x64" /opt/ErsatzTV
-if [[ "$CTTYPE" == "0" ]]; then
-  sed -i -e 's/^ssl-cert:x:104:$/render:x:104:root,ersatztv/' -e 's/^render:x:108:root,ersatztv$/ssl-cert:x:108:/' /etc/group
-else
-  sed -i -e 's/^ssl-cert:x:104:$/render:x:104:ersatztv/' -e 's/^render:x:108:ersatztv$/ssl-cert:x:108:/' /etc/group
-fi
 msg_ok "Installed ErsatzTV"
 
 msg_info "Creating Service"
